@@ -18,4 +18,4 @@ Adds an "Quicksave" button when opening images. It allows you to save the file t
 
 
 ### Know bugs
-* Saving embedded images from sites like prtscr generate corrupted files (Fix: Tell your friends to use ShareX)
+* Saving images uploaded with Lightshot (prnts.cr) generate corrupted files. (Fix: Tell your friends to use ShareX or Puush)

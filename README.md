@@ -13,7 +13,8 @@ Adds an "Quicksave" button when opening images. It allows you to save the file t
 3. Copy file 'Quicksave.plugin.js' to the plugin folder
 4. Reload/restart Discord (CTRL+R)
 5. Go to Settings>BetterDiscord>Plugins
-6. Enable and *configure* this plugin
+6. Enable this plugin
+7. Go to the plugin settings and set a download directory.
 
 
 ### Know bugs

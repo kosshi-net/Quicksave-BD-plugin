@@ -12,7 +12,7 @@ Quicksave.prototype.getDescription = function () {
 	return "Lets you save images fast with a short random name.";
 };
 Quicksave.prototype.getVersion = function () {
-	return "0.1.5";
+	return "0.1.6";
 };
 
 Quicksave.prototype.start = function () {};
@@ -66,19 +66,15 @@ Quicksave.prototype.observer = function (e) {
 	}
 };
 Quicksave.prototype.saveSettings = function (button) {
-	var fs = require('fs');
 	var settings = this.loadSettings();
 	var dir = document.getElementById('qs_directory').value;
-	// var err = document.getElementById('qs_err');
+	
+	var plugin = BdApi.getPlugin('Quicksave');
+	var err = document.getElementById('qs_err');
 
 	if(dir.slice(-1)!='/') dir+='/';
 	
-	fs.access(dir, fs.W_OK, accessCallback);
-	function accessCallback(err){
-		if(err){
-			err.innerHTML = "Error: Invalid directory!";
-			return;
-		}
+	if( plugin.accessSync(dir) ){
 	
 
 		settings.direcotry = dir;
@@ -87,13 +83,16 @@ Quicksave.prototype.saveSettings = function (button) {
 		
 		localStorage.Quicksave = JSON.stringify(settings);
 
-		this.stop();
-		this.start();
+		plugin.stop();
+		plugin.start();
 		
 		err.innerHTML = "";
 		button.innerHTML = "Saved and applied!";
-		setTimeout(function(){button.innerHTML = "Save and apply";},1000);
+	} else {
+		err.innerHTML = "Error: Invalid directory!";
+		return;
 	}
+		setTimeout(function(){button.innerHTML = "Save and apply";},1000);
 };
 
 Quicksave.prototype.settingsVersion = 5;
@@ -172,14 +171,17 @@ Quicksave.saveCurrentImage = function(){
 	var filename;
 	// I will NOT async these. No.
 	if(settings.norandom){
-		filename = url.split('/').last().split('?')[0];
+
+		filename = url.split('/').slice(-1)[0].split('?')[0];
+
 		if(plugin.accessSync(dir+filename)){
 			button.innerHTML = "Error: File "+filename+" already exists";
 			return;
 		}
 	}else{
 		filename = plugin.randomFilename64(settings.fnLength);
-		var filetype = '.'+url.split('.').last().split('?')[0];
+
+		var filetype =  '.'+url.split('.').slice(-1)[0].split('?')[0];
 
 		var funnybugs = 50;
 		while(plugin.accessSync(dir+filename+filetype) && funnybugs--)
@@ -213,8 +215,3 @@ Quicksave.saveCurrentImage = function(){
 	});
 	
 };
-
-Array.prototype.last = function() {
-    return this[this.length-1];
-};
-

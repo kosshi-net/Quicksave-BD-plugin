@@ -46,8 +46,7 @@ Quicksave.prototype.observer = function (e) {
 		var button = document.createElement('a');
 		
 		
-		fs.access(settings.direcotry, fs.W_OK, accessCallback);
-		function accessCallback(err){
+		fs.access(settings.direcotry, fs.W_OK, err=>{
 			if (err){
 				button.id = "qs_button";
 				
@@ -57,12 +56,12 @@ Quicksave.prototype.observer = function (e) {
 			}else{
 				button.id = "qs_button";
 				button.href = "#";
-				button.onclick = Quicksave.saveCurrentImage;
+				button.onclick = this.saveCurrentImage.bind(this);
 				button.className = "download-button";
 				button.innerHTML = "Quicksave";
 			}	
 			elem.appendChild(button);
-		}	
+		});
 	}
 };
 Quicksave.prototype.saveSettings = function (button) {
@@ -81,7 +80,7 @@ Quicksave.prototype.saveSettings = function (button) {
 		settings.fnLength = document.getElementById('qs_fnLength').value;
 		settings.norandom = document.getElementById('qs_norandom').checked;
 		
-		localStorage.Quicksave = JSON.stringify(settings);
+		bdPluginStorage.set(this.getName(), 'config', JSON.stringify(settings));
 
 		plugin.stop();
 		plugin.start();
@@ -107,7 +106,7 @@ Quicksave.prototype.defaultSettings = function () {
 
 Quicksave.prototype.resetSettings = function (button) {
 	var settings = this.defaultSettings();
-	localStorage.Quicksave = JSON.stringify(settings);
+	bdPluginStorage.set(this.getName(), 'config', JSON.stringify(settings));
 	this.stop();
 	this.start();
 	button.innerHTML = "Settings resetted!";
@@ -115,14 +114,22 @@ Quicksave.prototype.resetSettings = function (button) {
 };
 
 Quicksave.prototype.loadSettings = function() {
-	var settings = (localStorage.Quicksave) ? JSON.parse(localStorage.Quicksave) : {version:"0"};
+	// Loads settings from localstorage
+	var settings = (bdPluginStorage.get(this.getName(), 'config')) ? JSON.parse(bdPluginStorage.get(this.getName(), 'config')) : {version:"0"};
 	if(settings.version != this.settingsVersion){
-		console.log('[Quicksave] Settings were outdated/invalid/nonexistent. Using default settings.');
+		console.log('['+this.getName()+'] Settings were outdated/invalid/nonexistent. Using default settings.');
 		settings = this.defaultSettings();
-		localStorage.Quicksave = JSON.stringify(settings);
+		bdPluginStorage.set(this.getName(), 'config', JSON.stringify(settings));
 	}
 	return settings;
 };
+Quicksave.prototype.import = function (string) {
+	bdPluginStorage.set(this.getName(), 'config', string);
+	this.stop();
+	this.start();
+}
+
+
 Quicksave.prototype.getSettingsPanel = function () {
 	var settings = this.loadSettings();
 	var html = "<h3>Settings Panel</h3><br>";
@@ -136,8 +143,8 @@ Quicksave.prototype.getSettingsPanel = function () {
 	html += "Random filename length<br>";
 	html +=	"<input id='qs_fnLength' type='number' value=" + (settings.fnLength) + "> <br><br>";
 
-	html +="<br><button onclick='BdApi.getPlugin(\"Quicksave\").saveSettings(this)'>Save and apply</button>";
-	html +="<button onclick='BdApi.getPlugin(\"Quicksave\").resetSettings(this)'>Reset settings</button> <br><br>";
+	html +="<br><button onclick='BdApi.getPlugin('"+this.getName()+"').saveSettings(this)'>Save and apply</button>";
+	html +="<button onclick='BdApi.getPlugin('"+this.getName()+"').resetSettings(this)'>Reset settings</button> <br><br>";
 
 	html += "<p style='color:red' id='qs_err'></p>";
 
@@ -209,7 +216,10 @@ Quicksave.saveCurrentImage = function(){
 		});
 	}).on('error', function(err) {
 		fs.unlink(dest); 
-		button.innerHTML = "Error: " + err.message;
+		if(document.getElementById('qs_button'))
+			button.innerHTML = "Error: " + err.message;
+		else
+			BdApi.getCore.alert('Quicksave Error', 'Failed to download file '+url+'\nError: '+err.message);
 		console.log(err.message);
 		file.close();
 	});

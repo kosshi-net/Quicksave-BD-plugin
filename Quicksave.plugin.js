@@ -142,8 +142,8 @@ Quicksave.prototype.getSettingsPanel = function () {
 	html += "Random filename length<br>";
 	html +=	"<input id='qs_fnLength' type='number' value=" + (settings.fnLength) + "> <br><br>";
 
-	html +="<br><button onclick='BdApi.getPlugin('"+this.getName()+"').saveSettings(this)'>Save and apply</button>";
-	html +="<button onclick='BdApi.getPlugin('"+this.getName()+"').resetSettings(this)'>Reset settings</button> <br><br>";
+	html +="<br><button onclick=BdApi.getPlugin('"+this.getName()+"').saveSettings(this)>Save and apply</button>";
+	html +="<button onclick=BdApi.getPlugin('"+this.getName()+"').resetSettings(this)>Reset settings</button> <br><br>";
 
 	html += "<p style='color:red' id='qs_err'></p>";
 

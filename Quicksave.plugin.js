@@ -38,7 +38,6 @@ Quicksave.prototype.observer = function (e) {
 	// Fun stuff
 	var settings = this.loadSettings();
 	var fs = require('fs');
-
 	if(e.addedNodes.length > 0 && e.addedNodes[0].className=='callout-backdrop'){
 		var elem = document.getElementsByClassName('modal-image')[0];
 		if(!elem) return;
@@ -165,7 +164,7 @@ Quicksave.prototype.randomFilename64 = function(length){
 	return name;
 };
 
-Quicksave.saveCurrentImage = function(){
+Quicksave.prototype.saveCurrentImage = function(){
 	var button = document.getElementById('qs_button');
 	button.innerHTML = "Downloading...";
 	var plugin = BdApi.getPlugin('Quicksave');

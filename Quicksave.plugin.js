@@ -15,13 +15,83 @@ Quicksave.prototype.getVersion = function () {
 	return "0.1.6";
 };
 
-Quicksave.prototype.start = function () {};
-Quicksave.prototype.stop = function () {};
+
 Quicksave.prototype.load = function () {};
 Quicksave.prototype.unload = function () {};
 Quicksave.prototype.onMessage = function () {};
 Quicksave.prototype.onSwitch = function () {};
 
+Quicksave.prototype.start = function () {
+	BdApi.injectCSS("quicksave-style",`
+.quicksave-icon-btn
+{
+    position: relative;
+    z-index: 99;
+
+    display: block;
+
+    width: 24px;
+    height: 24px;
+    margin-bottom: -40px;
+    margin-left: 0px;
+    padding: 6px;
+
+    cursor: pointer;
+    transition: opacity .2s;
+
+    opacity: 0;
+    border-radius: 6px;
+    background-color: rgba(51, 51, 51, .6);
+}
+.embed .quicksave-icon-btn {
+	margin-bottom: -36px;
+}
+.quicksave-icon-btn::before
+{
+    position: absolute;
+    z-index: 99;
+
+    width: 24px;
+    height: 24px;
+
+    content: ' ';
+
+    background-image: url(https://my.mixtape.moe/uzlywa.png);
+    background-repeat: no-repeat;
+}
+:-webkit-any(.embed, .attachment-image):hover .quicksave-icon-btn,
+.quicksave-icon-btn.downloading,
+.quicksave-icon-btn.finished
+{
+    opacity: .7;
+}
+:-webkit-any(.embed, .attachment-image):hover .quicksave-icon-btn:hover
+{
+    opacity: 1;
+}
+.quicksave-icon-btn.downloading::before
+{
+    animation: spin 1s linear infinite;
+
+    background-image: url('https://my.mixtape.moe/ooxtex.png');
+}
+.quicksave-icon-btn.finished::before
+{
+    background-image: url('https://my.mixtape.moe/oagzae.png');
+}
+@keyframes spin
+{
+    100%
+    {
+        transform: rotate(360deg);
+    }
+}
+`);
+};
+
+Quicksave.prototype.stop = function () {
+    BdApi.clearCSS("quicksave-style");
+};
 
 Quicksave.prototype.accessSync = function(dir){
 	var fs = require('fs');
@@ -61,6 +131,17 @@ Quicksave.prototype.observer = function (e) {
 			}	
 			elem.appendChild(button);
 		});
+	}
+	
+	// Check for images
+	if (e.addedNodes.length && $(e.addedNodes[0]).attr("src") && $(e.addedNodes[0]).attr("src").indexOf("discordapp") != -1 && !$(e.addedNodes[0]).parent().hasClass("embed-thumbnail-video") && !$(e.addedNodes[0]).parent().hasClass("modal-image") && !$(e.addedNodes[0]).parent().siblings(".quicksave-icon-btn").length) {
+    	$("<div class='quicksave-icon-btn'></div>")
+			.insertBefore($(e.addedNodes[0].parentElement))
+			.on("click", function() {
+				if(!$(this).hasClass("downloading") && !$(this).hasClass("finished")) {
+					BdApi.getPlugin('Quicksave').saveFromIcon($(this));
+				}
+			});
 	}
 };
 Quicksave.prototype.saveSettings = function (button) {
@@ -164,6 +245,66 @@ Quicksave.prototype.randomFilename64 = function(length){
 	return name;
 };
 
+Quicksave.prototype.saveFromIcon = function($sender){
+	var plugin = BdApi.getPlugin('Quicksave');
+	var settings = plugin.loadSettings();
+	var fs = require('fs');
+	var dir = settings.direcotry;
+	var url = $sender.siblings("a").attr("href");
+	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
+
+	var filename;
+	// I will NOT async these. No.
+	if(settings.norandom){
+
+		filename = url.split('/').slice(-1)[0].split('?')[0];
+
+		if(plugin.accessSync(dir+filename)){
+			BdApi.getCore().alert('Quicksave Error',"Error: File "+filename+" already exists");
+			return;
+		}
+	}else{
+		filename = plugin.randomFilename64(settings.fnLength);
+
+		var filetype =  '.'+url.split('.').slice(-1)[0].split('?')[0];
+
+		var funnybugs = 50;
+		while(plugin.accessSync(dir+filename+filetype) && funnybugs--)
+			filename = plugin.randomFilename64(settings.fnLength);
+		if(funnybugs == -1){
+			BdApi.getCore().alert('Quicksave Error',"Error: Failed to find a free filename");
+			return;
+		}
+		filename += filetype;
+	}
+
+	var dest = dir+filename;
+	console.info("Quicksaving");
+	console.log(url);
+	console.log('-->');
+	console.log(dest);
+
+	var file = fs.createWriteStream(dest);
+	
+	
+	$sender.removeClass("finished").addClass("downloading");
+	net.get(url, function(response) {
+		response.pipe(file);
+		file.on('finish', function() {
+			console.log("Finished");
+			file.close();
+			$sender.removeClass("downloading").addClass("finished");
+		});
+	}).on('error', function(err) {
+		fs.unlink(dest)
+		BdApi.getCore().alert('Quicksave Error', 'Failed to download file '+url+'\nError: '+err.message);
+		console.log(err.message);
+		
+		file.close();
+		$sender.removeClass("downloading");
+	});
+};
+
 Quicksave.prototype.saveCurrentImage = function(){
 	var button = document.getElementById('qs_button');
 	button.innerHTML = "Downloading...";
@@ -218,7 +359,7 @@ Quicksave.prototype.saveCurrentImage = function(){
 		if(document.getElementById('qs_button'))
 			button.innerHTML = "Error: " + err.message;
 		else
-			BdApi.getCore.alert('Quicksave Error', 'Failed to download file '+url+'\nError: '+err.message);
+			BdApi.getCore().alert('Quicksave Error', 'Failed to download file '+url+'\nError: '+err.message);
 		console.log(err.message);
 		file.close();
 	});

@@ -9,10 +9,10 @@ Quicksave.prototype.getName = function () {
 	return "Quicksave";
 };
 Quicksave.prototype.getDescription = function () {
-	return "Lets you save images fast with a short random name.";
+	return "Lets you save images fast.";
 };
 Quicksave.prototype.getVersion = function () {
-	return "0.1.6";
+	return "0.1.7";
 };
 
 
@@ -87,6 +87,54 @@ Quicksave.prototype.start = function () {
     }
 }
 `);
+
+	this.namingMethods = {
+		// You can add your own naming methods easily, just copy that function line and change the name, no other mods needed
+		// Use "plugin" instead of "this", latter might work but im too lazy to check and fix it.
+		// Return the name. Perform all the checks here, the plugin will just blindly overwrite otherwise.
+		// Return null if something goes wrong.
+
+		random:function(plugin, settings, url, dir){
+
+			let filename = plugin.randomFilename64(settings.fnLength);
+
+			let filetype =  '.'+url.split('.').slice(-1)[0].split('?')[0];
+
+			let loops = 50;
+			while(plugin.accessSync(dir+filename+filetype) && loops--)
+				filename = plugin.randomFilename64(settings.fnLength);
+
+			if(loops == -1){
+				console.error('Could not find a free filename ),: Check permissions or increase filename lenght');
+				return null;
+			}
+			return filename+filetype;
+		},
+		original:function(plugin, settings, url, dir){
+
+			let filename_original = url.split('/').slice(-1)[0].split('?')[0];
+			let temp = filename_original.split('.');
+			let filetype_original = '.'+temp.pop();
+			filename_original = temp.join('.');
+
+			let filename = filename_original+filetype_original;
+
+			let num = 2;
+			let loops = 2048;
+			while( plugin.accessSync(dir+filename) && loops-- ){
+				filename = filename_original + ` (${num})` + filetype_original;
+				num++;
+			}
+
+			if(loops == -1){
+				console.error('Could not find a free filename ),: Possible causes: no permissions or you have saved truckloads of images with this name');
+				return null;
+			}
+
+			return filename;
+		}
+	}
+
 };
 
 Quicksave.prototype.stop = function () {
@@ -158,7 +206,7 @@ Quicksave.prototype.saveSettings = function (button) {
 
 		settings.direcotry = dir;
 		settings.fnLength = document.getElementById('qs_fnLength').value;
-		settings.norandom = document.getElementById('qs_norandom').checked;
+		settings.namingmethod = document.getElementById('qs_namingmethod').value;
 		
 		bdPluginStorage.set(this.getName(), 'config', JSON.stringify(settings));
 
@@ -174,12 +222,12 @@ Quicksave.prototype.saveSettings = function (button) {
 		setTimeout(function(){button.innerHTML = "Save and apply";},1000);
 };
 
-Quicksave.prototype.settingsVersion = 5;
+Quicksave.prototype.settingsVersion = 6;
 Quicksave.prototype.defaultSettings = function () {
 	return {
 		version: this.settingsVersion,
 		direcotry: "none",
-		norandom: false,
+		namingmethod: "original",
 		fnLength: 4
 	};
 };
@@ -216,9 +264,14 @@ Quicksave.prototype.getSettingsPanel = function () {
 	html += "Quicksave directory<br>";
 	html +=	"<input id='qs_directory' type='text' value=" + (settings.direcotry) + " style='width:100% !important;'> <br><br>";
 
-	html += "<input type='checkbox' id='qs_norandom'";
-	html += (settings.norandom) ? " checked>" : ">";
-	html += "Save files with original filename instead of new random one<br><br>";
+	html += "File naming method <br> <select id='qs_namingmethod'>"
+
+	for (let m in this.namingMethods) {
+		html += `<option value=${m} ${settings.namingmethod==m?" selected":""}>${m}</option> `;
+	}
+
+	html += "</select>"
+	html += "<br><br>";
 
 	html += "Random filename length<br>";
 	html +=	"<input id='qs_fnLength' type='number' value=" + (settings.fnLength) + "> <br><br>";
@@ -231,9 +284,6 @@ Quicksave.prototype.getSettingsPanel = function () {
 	html += "Help!<br>";
 	html += "\"What to put in the directory thing?\"<br>";
 	html += "C:/Users/youruser/Desktop/ for example.<br><br>";
-
-
-	html += "Protip! Saved files get a random base64 name. Only 4 chars allow ~17 million different filenames (64^4).<br><br>";
 
 	return html;
 };
@@ -253,29 +303,12 @@ Quicksave.prototype.saveFromIcon = function($sender){
 	var url = $sender.siblings("a").attr("href");
 	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
 
-	var filename;
-	// I will NOT async these. No.
-	if(settings.norandom){
 
-		filename = url.split('/').slice(-1)[0].split('?')[0];
+	var filename = plugin.namingMethods[settings.namingmethod](plugin, settings, url, dir);
 
-		if(plugin.accessSync(dir+filename)){
-			BdApi.getCore().alert('Quicksave Error',"Error: File "+filename+" already exists");
-			return;
-		}
-	}else{
-		filename = plugin.randomFilename64(settings.fnLength);
-
-		var filetype =  '.'+url.split('.').slice(-1)[0].split('?')[0];
-
-		var funnybugs = 50;
-		while(plugin.accessSync(dir+filename+filetype) && funnybugs--)
-			filename = plugin.randomFilename64(settings.fnLength);
-		if(funnybugs == -1){
-			BdApi.getCore().alert('Quicksave Error',"Error: Failed to find a free filename");
-			return;
-		}
-		filename += filetype;
+	if(filename == null){
+		BdApi.getCore().alert('Quicksave Error', 'Error while trying to find a free filename! Check console for more details.');
+		return;
 	}
 
 	var dest = dir+filename;
@@ -315,29 +348,12 @@ Quicksave.prototype.saveCurrentImage = function(){
 	var url = document.getElementsByClassName('modal-image')[0].childNodes[1].attributes[0].nodeValue;
 	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
 
-	var filename;
-	// I will NOT async these. No.
-	if(settings.norandom){
 
-		filename = url.split('/').slice(-1)[0].split('?')[0];
+	var filename = plugin.namingMethods[settings.namingmethod](plugin, settings, url, dir);
 
-		if(plugin.accessSync(dir+filename)){
-			button.innerHTML = "Error: File "+filename+" already exists";
-			return;
-		}
-	}else{
-		filename = plugin.randomFilename64(settings.fnLength);
-
-		var filetype =  '.'+url.split('.').slice(-1)[0].split('?')[0];
-
-		var funnybugs = 50;
-		while(plugin.accessSync(dir+filename+filetype) && funnybugs--)
-			filename = plugin.randomFilename64(settings.fnLength);
-		if(funnybugs == -1){
-			button.innerHTML = "Error: Failed to find a free filename";
-			return;
-		}
-		filename += filetype;
+	if(filename == null){
+		button.innerHTML = 'Error while trying to find a free filename! Check console for more details.';
+		return;
 	}
 
 	var dest = dir+filename;

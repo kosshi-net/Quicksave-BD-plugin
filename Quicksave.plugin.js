@@ -346,6 +346,10 @@ Quicksave.prototype.saveCurrentImage = function(){
 	var fs = require('fs');
 	var dir = settings.direcotry;
 	var url = document.getElementsByClassName('modal-image')[0].childNodes[1].attributes[0].nodeValue;
+	var twitterFix = new RegExp(":large$");
+	if (twitterFix.test(url)) {
+		url = url.replace(twitterFix, '');
+	}
 	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
 
 

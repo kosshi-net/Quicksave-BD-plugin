@@ -156,7 +156,7 @@ Quicksave.prototype.observer = function (e) {
 	// Fun stuff
 	var settings = this.loadSettings();
 	var fs = require('fs');
-	if(e.addedNodes.length > 0 && e.addedNodes[0].className=='callout-backdrop'){
+	if(e.addedNodes.length > 0 && e.addedNodes[0].className=='backdrop-2ohBEd''){
 		var elem = document.getElementsByClassName('modal-image')[0];
 		if(!elem) return;
 

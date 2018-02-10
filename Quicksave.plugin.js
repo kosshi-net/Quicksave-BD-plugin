@@ -12,7 +12,7 @@ Quicksave.prototype.getDescription = function () {
 	return "Lets you save images fast.";
 };
 Quicksave.prototype.getVersion = function () {
-	return "0.2.2";
+	return "0.2.3";
 };
 
 
@@ -22,7 +22,6 @@ Quicksave.prototype.onMessage = function () {};
 Quicksave.prototype.onSwitch = function () {};
 
 Quicksave.prototype.start = function () {
-
 	BdApi.injectCSS("quicksave-style", `
 		.thumbQuicksave {
 			z-index: 9000!important;
@@ -114,11 +113,14 @@ Quicksave.prototype.start = function () {
 
 			return filename;
 		}
-	}
+	};
+
+	this.injectThumbIcons();
 
 };
 
 Quicksave.prototype.stop = function () {
+	clearTimeout(this.injectionTimeout);
 	BdApi.clearCSS("quicksave-style");
 };
 
@@ -174,13 +176,17 @@ Quicksave.prototype.observer = function (e) {
 			elem.appendChild(button);
 		});
 	}
+};
 
-	// THUMBNAIL BUTTON
-	for(let i = 0; i < e.addedNodes.length; i++){
-		let elem = e.addedNodes[i];
+Quicksave.prototype.injectThumbIcons = function() {
+	var fs = require('fs');
+	let list = document.querySelectorAll("img");
+	for (let i = 0; i < list.length; i++) {
+		let elem = list[i];
+		//console.log(elem);
 
-		if(elem.localName != "img") continue;
 		if(!elem.parentElement.classList.contains('imageWrapper-38T7d9')) continue;
+		if(elem.parentElement.querySelector('.thumbQuicksave')) continue;
 
 		// console.log('SHOULD APPEND', e.addedNodes[i]);
 		let div = document.createElement('div');
@@ -206,6 +212,11 @@ Quicksave.prototype.observer = function (e) {
 			elem.parentElement.insertAdjacentElement('afterbegin', div);
 		});
 	}
+
+	// Originally this code was in mutationobserver, but that wasn't reliable.
+	// Now we use this timeout loop with global img search. Not optimal but
+	// works very well (and maybe even better perfomance wise?)
+	this.injectionTimeout = setTimeout(this.injectThumbIcons.bind(this), 2000);
 };
 
 Quicksave.prototype.saveSettings = function (button) {

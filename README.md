@@ -2,7 +2,7 @@
 This is a plugin for BetterDiscord.
 
 ### What does it do?
-Adds a saving buttons to images.
+Adds saving buttons to images. These will download the images from their original urls and save them on disk.
 
 ![img](https://kosshi.fi/u/YiKB.png)
 ![img](https://kosshi.fi/u/7ktC.png)

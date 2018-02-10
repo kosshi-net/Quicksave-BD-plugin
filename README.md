@@ -2,8 +2,10 @@
 This is a plugin for BetterDiscord.
 
 ### What does it do?
-Adds an "Quicksave" button when opening images. It allows you to save the file to a specified directory just with one click. Filename can be randomized.
+Adds a saving buttons to images.
 
+![img](https://kosshi.fi/u/YiKB.png)
+![img](https://kosshi.fi/u/7ktC.png)
 
 ### How to install?
 1. Make sure you have native Discord application installed with [BetterDiscord](https://betterdiscord.net)

@@ -12,7 +12,7 @@ Quicksave.prototype.getDescription = function () {
 	return "Lets you save images fast.";
 };
 Quicksave.prototype.getVersion = function () {
-	return "0.2.1";
+	return "0.2.2";
 };
 
 
@@ -25,7 +25,6 @@ Quicksave.prototype.start = function () {
 
 	BdApi.injectCSS("quicksave-style", `
 		.thumbQuicksave {
-
 			z-index: 9000!important;
 
 			background-color: rgba(51, 51, 51, .8);
@@ -38,13 +37,12 @@ Quicksave.prototype.start = function () {
 
 			border-radius: 3px;
 
-		    font-family: inherit;
-		    color: #FFF;
+			font-family: inherit;
+			color: #FFF;
 			font-weight: 500;
 			font-size: 14px;
 			opacity: 0;
 		}
-
 
 		.imageWrapper-38T7d9:hover .thumbQuicksave {
 			opacity: 0.8;
@@ -52,6 +50,10 @@ Quicksave.prototype.start = function () {
 
 		.thumbQuicksave:hover {
 			opacity: 1 !important;
+		}
+
+		#qs_button {
+			padding-left: 10px;
 		}
 	`);
 
@@ -135,76 +137,77 @@ Quicksave.prototype.observer = function (e) {
 	// MutationObserver, function is bound by BetterDiscord.
 	// We use this to see if user opens an image, if so, add a button.
 
+	var fs = require('fs');
+
 	// IMAGE OPEN BUTTON
 	if(e.addedNodes.length > 0 && e.addedNodes[0].className=='backdrop-2ohBEd'){
-
-		var settings = this.loadSettings();
-		var fs = require('fs');
+		let settings = this.loadSettings();
 
 		// Element that has the "Open Original" button as a child
-		var elem = document.querySelector(
+		let elem = document.querySelector(
 			'div.modal-2LIEKY > div > div > div:nth-child(2)'
 		);
 
 		if(!elem) return;
 
-		var button = document.createElement('a');
+		let button = document.createElement('a');
 
 		// This class gives the styling of the Open Original buttom
 		// These will break every other update now it seems
-		button.className = "downloadLink-wANcd8 size14-1wjlWP weightMedium-13x9Y8"; 
+		button.className = 
+			"downloadLink-wANcd8 size14-1wjlWP weightMedium-13x9Y8"; 
 
-		fs.access(settings.direcotry, fs.W_OK, err=>{
+		button.id = "qs_button";
+		button.href = "#";
+
+		// Should the access be checked all the time like this?
+		fs.access(settings.direcotry, fs.W_OK, (err)=>{
 			if (err){
-				button.id = "qs_button";
-				
-				button.innerHTML = "Can't Quicksave: save location is invalid";
+				button.innerHTML = 
+					"Can't Quicksave: Go to plugin settings and "+
+					"set the download directory!";
 			}else{
-				button.id = "qs_button";
-				button.href = "#";
 				button.onclick = this.saveCurrentImage.bind(this);
-
-
-				button.style.paddingLeft = "10px";
-
 				button.innerHTML = "Quicksave";
 			}	
 
 			elem.appendChild(button);
-
 		});
 	}
 
 	// THUMBNAIL BUTTON
 	for(let i = 0; i < e.addedNodes.length; i++){
+		let elem = e.addedNodes[i];
 
+		if(elem.localName != "img") continue;
+		if(!elem.parentElement.classList.contains('imageWrapper-38T7d9')) continue;
 
-		if(e.addedNodes[i].localName != "img") continue;
-		if(!e.addedNodes[i].parentElement.classList.contains('imageWrapper-38T7d9')) continue;
-
-		console.log('SHOULD APPEND', e.addedNodes[i]);
+		// console.log('SHOULD APPEND', e.addedNodes[i]);
 		let div = document.createElement('div');
 
 		div.innerHTML = "Save";
 
 		div.className = "thumbQuicksave";
 
-		div.onclick = (e)=>{
-			// Prevent parent from opening the image
-			e.stopPropagation();
-			e.preventDefault();
+		let settings = this.loadSettings();
+		fs.access(settings.direcotry, fs.W_OK, (err)=>{
+			if (err)
+				div.innerHTML = "Dir Error";
+			else
+				div.onclick = (e)=>{
+					// Prevent parent from opening the image
+					e.stopPropagation();
+					e.preventDefault();
 
-			this.saveThumbImage(e);
-		};
+					this.saveThumbImage(e);
+				};
 
-		// appendChild but as the first child
-		e.addedNodes[i].parentElement.insertAdjacentElement('afterbegin', div);
-
-
+			// appendChild but as the first child
+			elem.parentElement.insertAdjacentElement('afterbegin', div);
+		});
 	}
-
-	
 };
+
 Quicksave.prototype.saveSettings = function (button) {
 	var settings = this.loadSettings();
 	var dir = document.getElementById('qs_directory').value;
@@ -216,9 +219,8 @@ Quicksave.prototype.saveSettings = function (button) {
 	
 	if( plugin.accessSync(dir) ){
 	
-
 		settings.direcotry = dir;
-		settings.fnLength = 	document.getElementById('qs_fnLength').value;
+		settings.fnLength = 	document.getElementById('qs_fnLength')    .value;
 		settings.namingmethod = document.getElementById('qs_namingmethod').value;
 		
 		bdPluginStorage.set(this.getName(), 'config', JSON.stringify(settings));
@@ -232,7 +234,7 @@ Quicksave.prototype.saveSettings = function (button) {
 		err.innerHTML = "Error: Invalid directory!";
 		return;
 	}
-		setTimeout(function(){button.innerHTML = "Save and apply";},1000);
+	setTimeout(function(){button.innerHTML = "Save and apply";},1000);
 };
 
 // Incrementing this will cause the settings to be reset
@@ -281,7 +283,9 @@ Quicksave.prototype.import = function (string) {
 
 Quicksave.prototype.getSettingsPanel = function () {
 	var settings = this.loadSettings();
+	// TODO: REDO
 	var html = "<h3>Settings Panel</h3><br>";
+
 	html += "Quicksave directory<br>";
 	html +=	`<input id='qs_directory' type='text' value=${settings.direcotry} 
 			 style='width:100% !important;'> <br><br>`;
@@ -406,6 +410,8 @@ Quicksave.prototype.download = function(url, callback, progressCallback){
 	var fs = require('fs');
 	var dir = settings.direcotry;
 
+	if(!callback) callback = console.error;
+
 	// Removes ":large" from twitter's image urls. Pulled feature.
 	var twitterFix = new RegExp(":large$");
 	if (twitterFix.test(url)) url = url.replace(twitterFix, '');	
@@ -415,7 +421,6 @@ Quicksave.prototype.download = function(url, callback, progressCallback){
 	// are usually compressed.
 	// Can https use http? is this seperation necessary?
 	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
-
 
 	var filename = plugin.namingMethods[ settings.namingmethod ](
 		plugin, settings, url, dir
@@ -439,25 +444,27 @@ Quicksave.prototype.download = function(url, callback, progressCallback){
 	// Dont write odd filenames, i've had my windows get very confused
 
 	const req = net.request(url, (res) => {
-		// console.log('statusCode:', res.statusCode);
-		// console.log('headers:', res.headers);
-		console.log(`${res.statusCode} ${url}`);
-		console.log(res);
 
 		if(res.statusCode != 200) {
 			callback("Server responded with "+ res.statusCode);
 			return;
 		}
 
-
 		let contentType = res.headers["content-type"];
 
-		if( contentType.search('image') < 0 ) {
-			callback(`Content-type '${contentType}' is not an image.`);
+		if(!contentType){
+			callback(`No content-type header present!`);
+			console.error("No content-type header", res);
 			return;
 		}
 
-		let total = res.headers["content-length"];
+		if( contentType.search('image') < 0 ) {
+			callback(`Content-type '${contentType}' is not an image.`);
+			console.error("Non-image content-type header", res);
+			return;
+		}
+
+		let total = res.headers["content-length"]; // may be undefined!!
 		let bytes = 0;
 
 		// Keep the file fragmented until all chunks are downloaded, then 

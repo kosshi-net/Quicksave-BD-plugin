@@ -12,7 +12,7 @@ Quicksave.prototype.getDescription = function () {
 	return "Lets you save images fast.";
 };
 Quicksave.prototype.getVersion = function () {
-	return "0.1.7";
+	return "0.2.0";
 };
 
 
@@ -22,82 +22,19 @@ Quicksave.prototype.onMessage = function () {};
 Quicksave.prototype.onSwitch = function () {};
 
 Quicksave.prototype.start = function () {
-	BdApi.injectCSS("quicksave-style",`
-.quicksave-icon-btn
-{
-    position: relative;
-    z-index: 99;
-
-    display: block;
-
-    width: 24px;
-    height: 24px;
-    margin-bottom: -40px;
-    margin-left: 0px;
-    padding: 6px;
-
-    cursor: pointer;
-    transition: opacity .2s;
-
-    opacity: 0;
-    border-radius: 6px;
-    background-color: rgba(51, 51, 51, .6);
-}
-.embed .quicksave-icon-btn {
-	margin-bottom: -36px;
-}
-.quicksave-icon-btn::before
-{
-    position: absolute;
-    z-index: 99;
-
-    width: 24px;
-    height: 24px;
-
-    content: ' ';
-
-    background-image: url(https://my.mixtape.moe/uzlywa.png);
-    background-repeat: no-repeat;
-}
-:-webkit-any(.embed, .attachment-image):hover .quicksave-icon-btn,
-.quicksave-icon-btn.downloading,
-.quicksave-icon-btn.finished
-{
-    opacity: .7;
-}
-:-webkit-any(.embed, .attachment-image):hover .quicksave-icon-btn:hover
-{
-    opacity: 1;
-}
-.quicksave-icon-btn.downloading::before
-{
-    animation: spin 1s linear infinite;
-
-    background-image: url('https://my.mixtape.moe/ooxtex.png');
-}
-.quicksave-icon-btn.finished::before
-{
-    background-image: url('https://my.mixtape.moe/oagzae.png');
-}
-@keyframes spin
-{
-    100%
-    {
-        transform: rotate(360deg);
-    }
-}
-`);
 
 	this.namingMethods = {
-		// You can add your own naming methods easily, just copy that function line and change the name, no other mods needed
-		// Use "plugin" instead of "this", latter might work but im too lazy to check and fix it.
-		// Return the name. Perform all the checks here, the plugin will just blindly overwrite otherwise.
-		// Return null if something goes wrong.
+		// You can add your own naming methods easily, just copy that function 
+		// line and change the name, no other mods needed. Use "plugin" instead 
+		// of "this", latter might work but im too lazy to check and fix it.
+		// Return the name. Perform all the checks here, the plugin will just 
+		// blindly overwrite otherwise. Return null if something goes wrong.
 
 		random:function(plugin, settings, url, dir){
 
 			let filename = plugin.randomFilename64(settings.fnLength);
 
+			// Should be replaced with regex
 			let filetype =  '.'+url.split('.').slice(-1)[0].split('?')[0];
 
 			let loops = 50;
@@ -105,13 +42,19 @@ Quicksave.prototype.start = function () {
 				filename = plugin.randomFilename64(settings.fnLength);
 
 			if(loops == -1){
-				console.error('Could not find a free filename ),: Check permissions or increase filename lenght');
+				console.error(
+					'Could not find a free filename ),: Check permissions or '+
+					'increase filename lenght'
+				);
 				return null;
 			}
+
 			return filename+filetype;
 		},
+
 		original:function(plugin, settings, url, dir){
 
+			// Should be replaced with regex
 			let filename_original = url.split('/').slice(-1)[0].split('?')[0];
 			let temp = filename_original.split('.');
 			let filetype_original = '.'+temp.pop();
@@ -127,7 +70,11 @@ Quicksave.prototype.start = function () {
 			}
 
 			if(loops == -1){
-				console.error('Could not find a free filename ),: Possible causes: no permissions or you have saved truckloads of images with this name');
+				console.error(
+					'Could not find a free filename ),: Possible causes: no '+
+					'permissions or you have saved truckloads of images with '+
+					'this name'
+				);
 				return null;
 			}
 
@@ -138,7 +85,6 @@ Quicksave.prototype.start = function () {
 };
 
 Quicksave.prototype.stop = function () {
-    BdApi.clearCSS("quicksave-style");
 };
 
 Quicksave.prototype.accessSync = function(dir){
@@ -153,44 +99,47 @@ Quicksave.prototype.accessSync = function(dir){
 
 
 Quicksave.prototype.observer = function (e) {
-	// Fun stuff
-	var settings = this.loadSettings();
-	var fs = require('fs');
+	// MutationObserver, function is bound by BetterDiscord.
+	// We use this to see if user opens an image, if so, add a button.
+
 	if(e.addedNodes.length > 0 && e.addedNodes[0].className=='backdrop-2ohBEd'){
-		var elem = document.getElementsByClassName('modal-image')[0];
+
+		var settings = this.loadSettings();
+		var fs = require('fs');
+
+		// Element that has the "Open Original" button as a child
+		var elem = document.querySelector(
+			'div.modal-2LIEKY > div > div > div:nth-child(2)'
+		);
+
 		if(!elem) return;
 
 		var button = document.createElement('a');
-		
-		
 		fs.access(settings.direcotry, fs.W_OK, err=>{
 			if (err){
 				button.id = "qs_button";
 				
 				button.className = "download-button";
 				button.innerHTML = "Can't Quicksave: save location is invalid";
-	
 			}else{
 				button.id = "qs_button";
 				button.href = "#";
 				button.onclick = this.saveCurrentImage.bind(this);
-				button.className = "download-button";
+
+				// This class gives the styling of the Open Original buttom
+				// These will break every other update now it seems
+				button.className = "downloadLink-wANcd8 size14-1wjlWP weightMedium-13x9Y8"; 
+
+				button.style.paddingLeft = "10px";
+
 				button.innerHTML = "Quicksave";
 			}	
+
 			elem.appendChild(button);
+
 		});
 	}
 	
-	// Check for images
-	if (e.addedNodes.length && $(e.addedNodes[0]).attr("src") && $(e.addedNodes[0]).attr("src").indexOf("discordapp") != -1 && !$(e.addedNodes[0]).parent().hasClass("embed-thumbnail-video") && !$(e.addedNodes[0]).parent().hasClass("modal-image") && !$(e.addedNodes[0]).parent().siblings(".quicksave-icon-btn").length) {
-    	$("<div class='quicksave-icon-btn'></div>")
-			.insertBefore($(e.addedNodes[0].parentElement))
-			.on("click", function() {
-				if(!$(this).hasClass("downloading") && !$(this).hasClass("finished")) {
-					BdApi.getPlugin('Quicksave').saveFromIcon($(this));
-				}
-			});
-	}
 };
 Quicksave.prototype.saveSettings = function (button) {
 	var settings = this.loadSettings();
@@ -205,7 +154,7 @@ Quicksave.prototype.saveSettings = function (button) {
 	
 
 		settings.direcotry = dir;
-		settings.fnLength = document.getElementById('qs_fnLength').value;
+		settings.fnLength = 	document.getElementById('qs_fnLength').value;
 		settings.namingmethod = document.getElementById('qs_namingmethod').value;
 		
 		bdPluginStorage.set(this.getName(), 'config', JSON.stringify(settings));
@@ -222,7 +171,8 @@ Quicksave.prototype.saveSettings = function (button) {
 		setTimeout(function(){button.innerHTML = "Save and apply";},1000);
 };
 
-Quicksave.prototype.settingsVersion = 6;
+// Incrementing this will cause the settings to be reset
+Quicksave.prototype.settingsVersion = 6; 
 Quicksave.prototype.defaultSettings = function () {
 	return {
 		version: this.settingsVersion,
@@ -243,14 +193,21 @@ Quicksave.prototype.resetSettings = function (button) {
 
 Quicksave.prototype.loadSettings = function() {
 	// Loads settings from localstorage
-	var settings = (bdPluginStorage.get(this.getName(), 'config')) ? JSON.parse(bdPluginStorage.get(this.getName(), 'config')) : {version:"0"};
+	var settings = (bdPluginStorage.get(this.getName(), 'config')) ? 
+		JSON.parse( bdPluginStorage.get(this.getName(), 'config')) : 
+		{version:"0"};
+
 	if(settings.version != this.settingsVersion){
-		console.log('['+this.getName()+'] Settings were outdated/invalid/nonexistent. Using default settings.');
+		console.log(
+			`[${this.getName()}] Settings were outdated/invalid/nonexistent.`+
+			` Using default settings.`
+		);
 		settings = this.defaultSettings();
 		bdPluginStorage.set(this.getName(), 'config', JSON.stringify(settings));
 	}
 	return settings;
 };
+
 Quicksave.prototype.import = function (string) {
 	bdPluginStorage.set(this.getName(), 'config', string);
 	this.stop();
@@ -262,27 +219,36 @@ Quicksave.prototype.getSettingsPanel = function () {
 	var settings = this.loadSettings();
 	var html = "<h3>Settings Panel</h3><br>";
 	html += "Quicksave directory<br>";
-	html +=	"<input id='qs_directory' type='text' value=" + (settings.direcotry) + " style='width:100% !important;'> <br><br>";
+	html +=	`<input id='qs_directory' type='text' value=${settings.direcotry} 
+			 style='width:100% !important;'> <br><br>`;
 
-	html += "File naming method <br> <select id='qs_namingmethod'>"
+	html += "File naming method <br> <select id='qs_namingmethod'>";
 
-	for (let m in this.namingMethods) {
-		html += `<option value=${m} ${settings.namingmethod==m?" selected":""}>${m}</option> `;
-	}
+	for (let m in this.namingMethods) 
+		html += `<option value=${m} ${settings.namingmethod==m?" selected":""}>
+					${m}
+				 </option> `;
 
-	html += "</select>"
+	html += "</select>";
 	html += "<br><br>";
 
 	html += "Random filename length<br>";
-	html +=	"<input id='qs_fnLength' type='number' value=" + (settings.fnLength) + "> <br><br>";
+	html +=	`<input id='qs_fnLength' type='number' value=${settings.fnLength}>`;
 
-	html +="<br><button onclick=BdApi.getPlugin('"+this.getName()+"').saveSettings(this)>Save and apply</button>";
-	html +="<button onclick=BdApi.getPlugin('"+this.getName()+"').resetSettings(this)>Reset settings</button> <br><br>";
+	html +=`<br><br><br>
+	<button onclick=BdApi.getPlugin('${this.getName()}').saveSettings(this)>
+		Save and apply
+	</button>
+
+	<button onclick=BdApi.getPlugin('${this.getName()}').resetSettings(this)>
+		Reset settings
+	</button> <br><br>
+	 `;
 
 	html += "<p style='color:red' id='qs_err'></p>";
 
 	html += "Help!<br>";
-	html += "\"What to put in the directory thing?\"<br>";
+	html += '"What to put in the directory thing?"<br>';
 	html += "C:/Users/youruser/Desktop/ for example.<br><br>";
 
 	return html;
@@ -295,48 +261,6 @@ Quicksave.prototype.randomFilename64 = function(length){
 	return name;
 };
 
-Quicksave.prototype.saveFromIcon = function($sender){
-	var plugin = BdApi.getPlugin('Quicksave');
-	var settings = plugin.loadSettings();
-	var fs = require('fs');
-	var dir = settings.direcotry;
-	var url = $sender.siblings("a").attr("href");
-	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
-
-
-	var filename = plugin.namingMethods[settings.namingmethod](plugin, settings, url, dir);
-
-	if(filename == null){
-		BdApi.getCore().alert('Quicksave Error', 'Error while trying to find a free filename! Check console for more details.');
-		return;
-	}
-
-	var dest = dir+filename;
-	console.info("Quicksaving");
-	console.log(url);
-	console.log('-->');
-	console.log(dest);
-
-	var file = fs.createWriteStream(dest);
-	
-	
-	$sender.removeClass("finished").addClass("downloading");
-	net.get(url, function(response) {
-		response.pipe(file);
-		file.on('finish', function() {
-			console.log("Finished");
-			file.close();
-			$sender.removeClass("downloading").addClass("finished");
-		});
-	}).on('error', function(err) {
-		fs.unlink(dest)
-		BdApi.getCore().alert('Quicksave Error', 'Failed to download file '+url+'\nError: '+err.message);
-		console.log(err.message);
-		
-		file.close();
-		$sender.removeClass("downloading");
-	});
-};
 
 Quicksave.prototype.saveCurrentImage = function(){
 	var button = document.getElementById('qs_button');
@@ -345,18 +269,26 @@ Quicksave.prototype.saveCurrentImage = function(){
 	var settings = plugin.loadSettings();
 	var fs = require('fs');
 	var dir = settings.direcotry;
-	var url = document.getElementsByClassName('modal-image')[0].childNodes[1].attributes[0].nodeValue;
-	var twitterFix = new RegExp(":large$");
-	if (twitterFix.test(url)) {
-		url = url.replace(twitterFix, '');
-	}
-	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
 
+
+	var url = document.querySelector(
+		'div.modal-2LIEKY > div > div > div:nth-child(2) > a:nth-child(1)'
+	).attributes[0].nodeValue;
+
+
+	// Removes ":large" from twitter's image urls. Pulled feature.
+	var twitterFix = new RegExp(":large$");
+	if (twitterFix.test(url)) url = url.replace(twitterFix, '');	
+
+
+	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
 
 	var filename = plugin.namingMethods[settings.namingmethod](plugin, settings, url, dir);
 
-	if(filename == null){
-		button.innerHTML = 'Error while trying to find a free filename! Check console for more details.';
+	if(filename === null){
+		button.innerHTML = 
+			'Error while trying to find a free filename!'+
+			'Check console for more details.';
 		return;
 	}
 
@@ -376,10 +308,18 @@ Quicksave.prototype.saveCurrentImage = function(){
 		});
 	}).on('error', function(err) {
 		fs.unlink(dest); 
-		if(document.getElementById('qs_button'))
+
+		// User may have closed the image, the button is no longer visible.
+		// When this happens, use BetterDiscords alert function that does not
+		// work! What is Jiiks doing?
+		if(document.getElementById('qs_button')) 
 			button.innerHTML = "Error: " + err.message;
 		else
-			BdApi.getCore().alert('Quicksave Error', 'Failed to download file '+url+'\nError: '+err.message);
+			BdApi.getCore().alert(
+				'Quicksave Error', 
+				`Failed to download file ${url}\nError: `+ err.message
+			);
+
 		console.log(err.message);
 		file.close();
 	});

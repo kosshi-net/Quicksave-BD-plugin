@@ -17,5 +17,10 @@ Adds an "Quicksave" button when opening images. It allows you to save the file t
 7. Go to the plugin settings and set a download directory.
 
 
-### Know bugs
-* Saving images uploaded with Lightshot (prntscr) generate corrupted files. (Fix: Tell your friends to use ShareX or Puush)
+### Warnings
+- The plugin will download images from their original URLs. This is done because Discord rehosted images are usually compressed.
+- This will reveal your IP address to the server when downloading.
+- The plugin doesn't do much checking of the filename or file contents, only content-type header is looked at. 
+- It may write filenames without extensions, odd symbols or other filename wierdness that will confuse Windows.
+- Because of the direct download, the server can send anything it wants. [Even viruses](https://stackoverflow.com/questions/9675941/how-can-a-virus-exist-in-an-image). Tho as long as you dont execute them or use image viewers from last millenia, you should be fine.
+- MIT license. Use at your own risk. 

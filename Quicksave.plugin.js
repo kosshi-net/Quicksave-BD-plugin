@@ -146,11 +146,16 @@ Quicksave.prototype.observer = function (e) {
 		let settings = this.loadSettings();
 
 		// Element that has the "Open Original" button as a child
+
 		let elem = document.querySelector(
 			'div.modal-2LIEKY > div > div > div:nth-child(2)'
 		);
 
 		if(!elem) return;
+
+		if(!document.querySelector('div.modal-2LIEKY>div>div>div>img')) 
+			return;
+
 
 		let button = document.createElement('a');
 
@@ -184,7 +189,8 @@ Quicksave.prototype.injectThumbIcons = function() {
 	for (let i = 0; i < list.length; i++) {
 		let elem = list[i];
 		//console.log(elem);
-
+		
+		if(!elem.parentElement.href) continue;
 		if(!elem.parentElement.classList.contains('imageWrapper-38T7d9')) continue;
 		if(elem.parentElement.querySelector('.thumbQuicksave')) continue;
 

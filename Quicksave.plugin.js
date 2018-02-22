@@ -1,5 +1,12 @@
 //META{"name":"Quicksave"}*//
 
+/*
+This whole thing is based on a soon 2 years old template. This prototype thing
+looks terrible and some functions in BdApi don't work at all and my setting
+handling is a little bit clunky. Rewrite everything once Bd2.0 comes out.
+(it was supposed to come out soon in 2016)
+*/ 
+
 'use strict';
 var Quicksave = function () {};
 Quicksave.prototype.getAuthor = function () {
@@ -12,7 +19,7 @@ Quicksave.prototype.getDescription = function () {
 	return "Lets you save images fast.";
 };
 Quicksave.prototype.getVersion = function () {
-	return "0.2.3";
+	return "0.2.5";
 };
 
 
@@ -22,6 +29,15 @@ Quicksave.prototype.onMessage = function () {};
 Quicksave.prototype.onSwitch = function () {};
 
 Quicksave.prototype.start = function () {
+
+	this.extensionWhitelist = 
+		`png, gif, jpg, jpeg, jpe, jif, jfif, jfi, bmp, apng, webp`;
+
+	this.namingMethods = {
+		original:"Keep Original",
+		random:  "Random"
+	};
+
 	BdApi.injectCSS("quicksave-style", `
 		.thumbQuicksave {
 			z-index: 9000!important;
@@ -56,65 +72,6 @@ Quicksave.prototype.start = function () {
 		}
 	`);
 
-	this.namingMethods = {
-		// You can add your own naming methods easily, just copy that function 
-		// line and change the name, no other mods needed. Use "plugin" instead 
-		// of "this", latter might work but im too lazy to check and fix it.
-		// Return the name. Perform all the checks here, the plugin will just 
-		// blindly overwrite otherwise. Return null if something goes wrong.
-
-		random:function(plugin, settings, url, dir){
-
-			let filename = plugin.randomFilename64(settings.fnLength);
-
-			// Should be replaced with regex
-			let filetype =  '.'+url.split('.').slice(-1)[0].split('?')[0];
-
-			let loops = 50;
-			while(plugin.accessSync(dir+filename+filetype) && loops--)
-				filename = plugin.randomFilename64(settings.fnLength);
-
-			if(loops == -1){
-				console.error(
-					'Could not find a free filename ),: Check permissions or '+
-					'increase filename lenght'
-				);
-				return null;
-			}
-
-			return filename+filetype;
-		},
-
-		original:function(plugin, settings, url, dir){
-
-			// Should be replaced with regex
-			let filename_original = url.split('/').slice(-1)[0].split('?')[0];
-			let temp = filename_original.split('.');
-			let filetype_original = '.'+temp.pop();
-			filename_original = temp.join('.');
-
-			let filename = filename_original+filetype_original;
-
-			let num = 2;
-			let loops = 2048;
-			while( plugin.accessSync(dir+filename) && loops-- ){
-				filename = filename_original + ` (${num})` + filetype_original;
-				num++;
-			}
-
-			if(loops == -1){
-				console.error(
-					'Could not find a free filename ),: Possible causes: no '+
-					'permissions or you have saved truckloads of images with '+
-					'this name'
-				);
-				return null;
-			}
-
-			return filename;
-		}
-	};
-
 	this.injectThumbIcons();
 
 };
@@ -143,19 +100,28 @@ Quicksave.prototype.observer = function (e) {
 
 	// IMAGE OPEN BUTTON
 	if(e.addedNodes.length > 0 && e.addedNodes[0].className=='backdrop-2ohBEd'){
-		let settings = this.loadSettings();
+
+		// console.info(e.addedNodes[0]);
+
+		let modal = document.querySelector('div.modal-2LIEKY');
+
+		// Check if the added element actually has image modal, loading or not
+		if(
+			!modal.querySelector('.imagePlaceholder-jWw28v') &&
+			!modal.querySelector('.imageWrapper-38T7d9')
+		) 
+		return;
+
+		// 
+		// imagePlaceholderOverlay-3uPw1V imagePlaceholder-jWw28v
 
 		// Element that has the "Open Original" button as a child
-
-		let elem = document.querySelector(
+		let buttonParent = document.querySelector(
 			'div.modal-2LIEKY > div > div > div:nth-child(2)'
 		);
+		if(!buttonParent) return;
 
-		if(!elem) return;
-
-		if(!document.querySelector('div.modal-2LIEKY>div>div>div>img')) 
-			return;
-
+		let settings = this.loadSettings();
 
 		let button = document.createElement('a');
 
@@ -178,7 +144,7 @@ Quicksave.prototype.observer = function (e) {
 				button.innerHTML = "Quicksave";
 			}	
 
-			elem.appendChild(button);
+			buttonParent.appendChild(button);
 		});
 	}
 };
@@ -187,18 +153,16 @@ Quicksave.prototype.injectThumbIcons = function() {
 	var fs = require('fs');
 	let list = document.querySelectorAll("img");
 	for (let i = 0; i < list.length; i++) {
-		let elem = list[i];
+		let elem = list[i].parentElement;
 		//console.log(elem);
 		
-		if(!elem.parentElement.href) continue;
-		if(!elem.parentElement.classList.contains('imageWrapper-38T7d9')) continue;
-		if(elem.parentElement.querySelector('.thumbQuicksave')) continue;
+		if(	!elem.href
+		 || !elem.classList.contains('imageWrapper-38T7d9')
+		 ||  elem.querySelector('.thumbQuicksave')
+		) continue;
 
-		// console.log('SHOULD APPEND', e.addedNodes[i]);
 		let div = document.createElement('div');
-
 		div.innerHTML = "Save";
-
 		div.className = "thumbQuicksave";
 
 		let settings = this.loadSettings();
@@ -215,7 +179,7 @@ Quicksave.prototype.injectThumbIcons = function() {
 				};
 
 			// appendChild but as the first child
-			elem.parentElement.insertAdjacentElement('afterbegin', div);
+			elem.insertAdjacentElement('afterbegin', div);
 		});
 	}
 
@@ -375,7 +339,18 @@ Quicksave.prototype.saveCurrentImage = function(){
 	}, 
 
 	(bytes, total) => {
-		button.innerHTML = `${bytes}b/${total}b (${(bytes/total*100)|0}%)`;
+
+		const f = bytes/total;
+		const totalBars = 10;
+
+		let filledBars = Math.round(f*totalBars);
+		let bar = "";
+
+		for (var i = 0; i < totalBars; i++)
+			bar+= i<filledBars ? "▓" : "░"; // Who needs fancy graphics lol
+				
+		button.innerHTML = `[${bar}]`;
+
 	});
 };
 
@@ -420,12 +395,15 @@ Quicksave.prototype.download = function(url, callback, progressCallback){
 	//		If everything's fine, its gonna be null
 	//
 	//	progressCallback
-	//		First argument will be downloaded bytes, second is total bytes
+	//		First argument will be downloaded bytes, second is total bytes (may
+	// 		be undefined!)
 
 	var plugin = BdApi.getPlugin('Quicksave');
 	var settings = plugin.loadSettings();
 	var fs = require('fs');
 	var dir = settings.direcotry;
+
+	const qs = "[QUICKSAVE]"; // Use as the prefix when logging
 
 	if(!callback) callback = console.error;
 
@@ -439,53 +417,85 @@ Quicksave.prototype.download = function(url, callback, progressCallback){
 	// Can https use http? is this seperation necessary?
 	var net = (url.split('//')[0]=='https:') ? require('https') : require('http');
 
-	var filename = plugin.namingMethods[ settings.namingmethod ](
-		plugin, settings, url, dir
-	);
-
-	if(filename === null){
-		callback("Error while trying to find a free filename!");
-		return;
-	}
-
-	var dest = dir+filename;
-	console.info("Quicksaving");
-	console.log(url);
-	console.log('-->');
-	console.log(dest);
-
 
 	// TODO: 
-	// Check if the downloaded file is actually an image
 	// Make sure we dont download gigabytes
-	// Dont write odd filenames, i've had my windows get very confused
+	console.info(`${qs} GET ${url}`);
 
 	const req = net.request(url, (res) => {
+		console.info(`${qs} Server responded`, res);
+		// REDIRECTIONS
+		if(	res.statusCode == 301 // Moved permanently
+		 || res.statusCode == 308 // Permanent redirect
+		 || res.statusCode == 302 // Found
+		 || res.statusCode == 307 // See other
+		) {
+			
+			let newURL = res.headers.location;
+			console.info(`${qs} Redirected to ${newURL}`);
+			if(!newURL) {
+				callback(
+					`Redirected with ${res.statusCode}`+
+					`but no location header present!`
+				);
+				console.error(`${qs} No location header in redirection!`);
+				return;
+			}
+			plugin.download(newURL, callback, progressCallback);
+			return;
+		}
 
+		// Error if not 200
 		if(res.statusCode != 200) {
 			callback("Server responded with "+ res.statusCode);
+			console.error("Response code "+res.statusCode+"", res);
 			return;
 		}
 
+		// Check content type
 		let contentType = res.headers["content-type"];
-
 		if(!contentType){
 			callback(`No content-type header present!`);
-			console.error("No content-type header", res);
+			console.error(`${qs} No content-type header`);
 			return;
 		}
 
-		if( contentType.search('image') < 0 ) {
+		const dropboxSpecialCase = ( url.search('dropbox') > 0 &&
+									 contentType.search('binary') > 0 );
+
+		if( contentType.search('image') < 0 && !dropboxSpecialCase) {
 			callback(`Content-type '${contentType}' is not an image.`);
-			console.error("Non-image content-type header", res);
+			console.error(`${qs} Non-image content-type header!`);
 			return;
 		}
+
+
+		var filename = plugin.getFilename(
+			{
+				plugin:plugin,
+				settings:settings,
+				url: url,
+				dir: dir,
+				res: res
+			}
+		);
+
+		if(!filename) {
+	 		callback("Problems with the filename! Check console.");
+		 	return;
+		}
+
+
+		console.info(`${qs} SOURCE ${url}`);
+		console.info(`${qs} DESTINATION ${dir+filename}`);
+		console.info(`${qs} Now downloading...`);
 
 		let total = res.headers["content-length"]; // may be undefined!!
 		let bytes = 0;
 
 		// Keep the file fragmented until all chunks are downloaded, then 
-		// concat. The only reason to do this is the ease of implementation.
+		// concat. Moslty because its easy to implement, but also useful if we 
+		// don't know the file size in advacne.
 
 		let chunks = [];
 
@@ -497,11 +507,12 @@ Quicksave.prototype.download = function(url, callback, progressCallback){
 		});
 
 		res.on('end', ()=> {
-			fs.writeFile(dest, Buffer.concat(chunks), (err)=>{
+			fs.writeFile(dir+filename, Buffer.concat(chunks), (err)=>{
 				if(err){
 					console.error(err);
 					callback(err.message);
 				} else {
+					console.info(`${qs} File has been successfully written!`);
 					callback(null);
 				}
 			});
@@ -515,3 +526,85 @@ Quicksave.prototype.download = function(url, callback, progressCallback){
 	req.end();
 };
 
+
+Quicksave.prototype.getFilename = function(context){
+	const plugin = context.plugin;
+	const settings = context.settings;
+	const url = context.url;
+	const res = context.res; // Node http module response
+	const dir = context.dir;
+
+	let fullname = null; // Everything
+	let filename = null; // No extension
+	let filetype = null; // Only extension
+
+	// Try to find out the real filename. Can be done like so:
+	// - From filename[*] field of content-disposition header
+	// - From URL
+
+	// ## URL
+	// Get the chars after the last / and remove ? and anything after it
+	let filename_url = url.split('/').slice(-1)[0].split('?')[0];
+	fullname = filename_url.trim();
+
+	// ## HEADER
+	// Don't bother with filename*, just keep it simple
+	let cd_header = res.headers["content-disposition"];
+	if(cd_header){
+		let result = cd_header.match(/filename="(.+?)"/);
+		if(result[1]) fullname = result[1].trim();
+	}
+
+	// Don't write the file without a valid file extension! We need to find it
+	// out as well:
+	// - From the already extracted filename
+	// - (not implemented) From content-type header 
+	// - (not implemented) From the magic bytes of the file 
+	// Extracting from the filename is easy and works 99% of the time
+
+	filetype = fullname.split('.').slice(-1)[0].trim();
+
+	// Validate file extension
+	if(plugin.extensionWhitelist.search(filetype) < 0) {
+		console.error("Can't fid a valid file extension!", context);
+		return null;
+	}
+
+	filename = fullname.slice(0, -(filetype.length+1));
+
+	// Do user configured renaming here!
+	if( settings.namingmethod == "random" ) {
+		filename = plugin.randomFilename64(settings.fnLength);
+	}
+
+	// SANITIZE THE FILENAME
+	// Strip path info, restrict the charset, remove dots or spaces from lead
+
+	filename.split(/[/\\]/).slice(-1)[0].replace(/([^a-z0-9_\-.() ]+)/, '_');
+
+	while( filename.length > 0 && (filename[0] == '.' || filename[0] == ' ') ) 
+		filename = filename.slice(1);
+
+	filename = filename.trim();
+
+	if(filename.length === 0) filename = "unknown";
+
+	// Rename to "filename (number).jpg" if file occupied
+	let num = 2;
+	let maxloops = 99;
+	// Using accessSync like this will lock up discord!
+	// Possible race condition with other applications between this and actual
+	// write in the caller!
+	while( plugin.accessSync(dir+fullname) && maxloops-- ){
+		fullname = filename + ` (${num}).` + filetype;
+		num++;
+	}
+
+	if(maxloops == -1){
+		console.error(
+			'No free filename found', context
+		);
+		return null;
+	}
+	return fullname;
+};

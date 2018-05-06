@@ -536,7 +536,7 @@ class Quicksave {
 		filetype = fullname.split('.').slice(-1)[0].trim();
 
 		// Validate file extension
-		if(plugin.extensionWhitelist.search(filetype) < 0) {
+		if(plugin.extensionWhitelist.search(filetype.toLowerCase()) < 0) {
 			console.error("Can't find a valid file extension!", context);
 			return null;
 		}

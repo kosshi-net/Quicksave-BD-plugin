@@ -4,8 +4,8 @@ This is a plugin for BetterDiscord.
 ### What does it do?
 Adds saving buttons to images. These will download the images from their original urls and save them on disk.
 
-![img](https://kosshi.fi/u/YiKB.png)
-![img](https://kosshi.fi/u/7ktC.png)
+![img](https://kosshi.net/images/quicksave0.png)
+![img](https://kosshi.net/images/quicksave1.png)
 
 ### How to install?
 1. Make sure you have native Discord application installed with [BetterDiscord](https://betterdiscord.net)

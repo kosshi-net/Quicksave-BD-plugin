@@ -47,9 +47,9 @@ class Quicksave {
 				opacity: 1 !important;
 			}
 
-			#qs_button {
-				padding-left: 10px;
-			}
+			//#qs_button {
+			//	padding-left: 10px;
+			//}
 		`);
 
 		this.injectThumbIcons();
@@ -78,11 +78,10 @@ class Quicksave {
 		var fs = require('fs');
 
 		// IMAGE OPEN BUTTON
-		if(    e.addedNodes.length > 0 
-			&& e.addedNodes[0].className=='backdrop-1ocfXc'
-			){
 
-			// console.info(e.addedNodes[0]);
+		if(    e.addedNodes.length > 0 
+			&& e.addedNodes[0].className=='backdrop-1wrmKB da-backdrop'
+			){
 
 			let modal = document.querySelector('div.modal-1UGdnR');
 
@@ -93,15 +92,13 @@ class Quicksave {
 			) 
 			return;
 
-			// 
-			// imagePlaceholderOverlay-3uPw1V imagePlaceholder-jWw28v
-
 			// Element that has the "Open Original" button as a child
 			let buttonParent = document.querySelector(
-				'div.modal-1UGdnR > div > div > div:nth-child(2)'
+				'.inner-1JeGVc > div'
 			);
-			if(!buttonParent) return;
 
+			if(!buttonParent) return;
+			console.log('buttonparent');
 			let settings = this.loadSettings();
 
 			let button = document.createElement('a');
@@ -109,7 +106,7 @@ class Quicksave {
 			// This class gives the styling of the Open Original buttom
 			// These will break every other update now it seems
 			button.className = 
-				"downloadLink-2oSgiF size14-3iUx6q weightMedium-2iZe9B"; 
+				"anchor-3Z-8Bb downloadLink-1ywL9o size14-3iUx6q weightMedium-2iZe9B da-anchor da-downloadLink da-weightMedium"; 
 
 			button.id = "qs_button";
 			button.href = "#";
@@ -291,16 +288,17 @@ class Quicksave {
 		var button = document.getElementById('qs_button');
 		var plugin = BdApi.getPlugin('Quicksave');
 
-		var url = document.querySelector(
-			'div.modal-1UGdnR > div > div > div:nth-child(2) > a:nth-child(1)'
+		var url = document.querySelector( // Open Original - button
+			'div.modal-1UGdnR > div > div > a:nth-child(2)'
 		);
 
-		if(!url) {
+		if(!url || !url.href || url.href.search('http') == -1) {
 			button.innerHTML = "Error: Couldn't extract url!";
+			console.log(url);
 			return;
 		}
 
-		url = url.attributes[0].nodeValue; // do proper error detection for this
+		url = url.href;
 
 		button.innerHTML = "Downloading...";
 
@@ -312,7 +310,7 @@ class Quicksave {
 		}, 
 
 		(bytes, total) => {
-
+			// TODO: In case of undefined total, just tell bytes downloaded
 			const f = bytes/total;
 			const totalBars = 10;
 
@@ -329,6 +327,7 @@ class Quicksave {
 
 	saveThumbImage(e){
 		// Reimplementation of pull #2, icon in thumbnails
+
 		var button = e.srcElement;
 		var plugin = BdApi.getPlugin('Quicksave');
 
@@ -353,6 +352,7 @@ class Quicksave {
 		}, 
 
 		(bytes, total) => {
+			// TODO: In case of undefined total, just tell bytes downloaded
 			button.innerHTML = `${(bytes/total*100)|0}%`;
 		});
 	}

@@ -47,9 +47,9 @@ class Quicksave {
 				opacity: 1 !important;
 			}
 
-			//#qs_button {
-			//	padding-left: 10px;
-			//}
+			#qs_button {
+				padding-left: 10px;
+			}
 		`);
 
 		this.injectThumbIcons();

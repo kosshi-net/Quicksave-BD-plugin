@@ -557,8 +557,9 @@ class Quicksave {
 			filename = filename.slice(1);
 
 		filename = filename.trim();
-
 		if(filename.length === 0) filename = "unknown";
+		
+		fullname = filename+'.'+filetype;
 
 		// Rename to "filename (number).jpg" if file occupied
 		let num = 2;
